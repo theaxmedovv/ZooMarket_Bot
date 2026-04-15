@@ -21,18 +21,6 @@ function updateStep($pdo, $chatId, $step)
         ->execute([$step, $chatId]);
 }
 
-function saveTemp($pdo, $chatId, $data)
-{
-    $stmt = $pdo->prepare("SELECT temp_data FROM users WHERE telegram_id=?");
-    $stmt->execute([$chatId]);
-
-    $old = json_decode($stmt->fetchColumn() ?? '{}', true);
-    $new = json_encode(array_merge($old, $data));
-
-    $pdo->prepare("UPDATE users SET temp_data=? WHERE telegram_id=?")
-        ->execute([$new, $chatId]);
-}
-
 function insertByAvailableColumns($pdo, $table, $data)
 {
     $cols = array_keys($data);

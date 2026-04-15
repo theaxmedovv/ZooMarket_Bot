@@ -17,11 +17,3 @@ $telegram = new Api($token);
 
 $bot = new Bot($telegram);
 $bot->run();
-
-if ($callback_query = $telegram->Callback_Query()) {
-    $chatId = $telegram->Callback_ChatID();
-    $data = $telegram->Callback_Data();
-
-    // Agar foydalanuvchi hozir rolni tanlash bosqichida bo'lsa
-    handleRegRole($pdo, $telegram, $chatId, $data);
-}

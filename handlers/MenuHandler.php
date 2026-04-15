@@ -39,11 +39,11 @@ function handleHomeMenu($pdo, $telegram, $chatId, $role)
 function handleMainMenu($pdo, $telegram, $chatId, $user, $text, $role)
 {
     if ($text === "➕ Yangi e'lon") {
-        updateStep($pdo, $chatId, 'wait_animal_type');
+        updateStep($pdo, $chatId, 'wait_post_title');
 
         $telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Qanday hayvon?",
+            'text' => "Qaysi hayvonni sotmoqchisiz? (masalan: Husky it, Persian mushuk)",
             'reply_markup' => backKeyboard()
         ]);
     }

@@ -18,12 +18,19 @@ class Router
         $text = trim((string)$message->getText());
         $contact = $message->getContact();
         $photo = $message->getPhoto();
+        $from = $message->getFrom();
+        $username = $from ? ($from->getUsername() ?? null) : null;
+        $firstName = $from ? ($from->getFirstName() ?? null) : null;
 
         $user = getUserByChatId($pdo, $chatId);
 
         if (!$user) {
-            handleUnregisteredUser($pdo, $telegram, $chatId, $text);
+            handleUnregisteredUser($pdo, $telegram, $chatId, $text, $username, $firstName);
             return;
+        }
+
+        if ($username && (($user['username'] ?? null) !== $username || ($user['first_name'] ?? null) !== $firstName)) {
+            updateUser($pdo, $chatId, ['username' => $username, 'first_name' => $firstName]);
         }
 
         $step = $user['step'];
@@ -42,6 +49,10 @@ class Router
                 handleRegPhone($pdo, $telegram, $chatId, $text, $contact);
                 break;
 
+            case 'reg_address':
+                handleRegAddress($pdo, $telegram, $chatId, $text);
+                break;
+
             case 'reg_role':
                 handleRegRole($pdo, $telegram, $chatId, $text);
                 break;
@@ -50,12 +61,8 @@ class Router
                 handleMainMenu($pdo, $telegram, $chatId, $user, $text, $user['role']);
                 break;
 
-            case 'wait_animal_type':
-                handleWaitAnimalType($pdo, $telegram, $chatId, $text);
-                break;
-
-            case 'wait_photo':
-                handleWaitPhoto($pdo, $telegram, $chatId, $photo, $user);
+            case 'wait_post_title':
+                handleWaitPostTitle($pdo, $telegram, $chatId, $text, $user);
                 break;
         }
     }

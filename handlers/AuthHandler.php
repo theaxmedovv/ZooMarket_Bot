@@ -1,16 +1,16 @@
 <?php
 
-function handleUnregisteredUser($pdo, $telegram, $chatId, $text)
+function handleUnregisteredUser($pdo, $telegram, $chatId, $text, $username = null, $firstName = null)
 {
     if ($text === '/start') {
         $stmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id = ?");
         $stmt->execute([$chatId]);
 
         if (!$stmt->fetch()) {
-            $pdo->prepare("INSERT INTO users (telegram_id, step) VALUES (?, 'reg_name')")
-                ->execute([$chatId]);
+            $pdo->prepare("INSERT INTO users (telegram_id, username, first_name, step) VALUES (?, ?, ?, 'reg_name')")
+                ->execute([$chatId, $username, $firstName]);
         } else {
-            updateUser($pdo, $chatId, ['step' => 'reg_name']);
+            updateUser($pdo, $chatId, ['username' => $username, 'first_name' => $firstName, 'step' => 'reg_name']);
         }
 
         $telegram->sendMessage([
@@ -31,7 +31,7 @@ function handleRegName($pdo, $telegram, $chatId, $text)
         return;
     }
 
-    updateUser($pdo, $chatId, ['name' => $text, 'step' => 'reg_phone']);
+    updateUser($pdo, $chatId, ['name' => $text, 'first_name' => $text, 'step' => 'reg_phone']);
 
     // Pastki klaviatura tugmasi (Reply Keyboard)
     $telegram->sendMessage([
@@ -57,28 +57,44 @@ function handleRegPhone($pdo, $telegram, $chatId, $text, $contact)
         return;
     }
 
-    updateUser($pdo, $chatId, ['phone' => $phone, 'step' => 'reg_role']);
+    updateUser($pdo, $chatId, ['phone' => $phone, 'step' => 'reg_address']);
 
-    // Inline tugmalar (Xabar ostidagi tugmalar)
+    $telegram->sendMessage([
+        'chat_id' => $chatId,
+        'text' => "🏠 Endi manzilingizni kiriting:",
+        'parse_mode' => 'markdown',
+    ]);
+}
+
+function handleRegAddress($pdo, $telegram, $chatId, $text)
+{
+    updateUser($pdo, $chatId, ['address' => $text, 'step' => 'reg_role']);
+
     $telegram->sendMessage([
         'chat_id' => $chatId,
         'text' => "👤 **Siz kimsiz?**\nO'zingizga mos rolni tanlang:",
         'parse_mode' => 'markdown',
         'reply_markup' => json_encode([
-            'inline_keyboard' => [
-                [
-                    ['text' => "🛍️ Sotuvchi", 'callback_data' => 'role_seller'],
-                    ['text' => "👤 Xaridor", 'callback_data' => 'role_user']
-                ]
-            ]
+            'keyboard' => [[['text' => 'Sotuvchi'], ['text' => 'Xaridor']]],
+            'resize_keyboard' => true,
+            'one_time_keyboard' => true
         ])
     ]);
 }
 
-function handleRegRole($pdo, $telegram, $chatId, $callbackData)
+function handleRegRole($pdo, $telegram, $chatId, $text)
 {
-    // Callback ma'lumotiga qarab rolni aniqlash
-    $role = ($callbackData === 'role_seller') ? 'seller' : 'user';
+    $normalized = mb_strtolower(trim((string) $text));
+
+    if ($normalized !== 'sotuvchi' && $normalized !== 'xaridor') {
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Iltimos, faqat quyidagidan birini tanlang: Sotuvchi yoki Xaridor.",
+        ]);
+        return;
+    }
+
+    $role = $normalized === 'sotuvchi' ? 'seller' : 'user';
     $roleName = ($role === 'seller') ? "Sotuvchi" : "Xaridor";
 
     updateUser($pdo, $chatId, ['role' => $role, 'step' => 'main']);

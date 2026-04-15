@@ -1,30 +1,24 @@
 <?php
 
-function handleWaitAnimalType($pdo, $telegram, $chatId, $text)
+function handleWaitPostTitle($pdo, $telegram, $chatId, $text, $user)
 {
-    saveTemp($pdo, $chatId, ['animal_type' => $text]);
+    $animalText = trim((string) $text);
 
-    updateStep($pdo, $chatId, 'wait_photo');
-
-    $telegram->sendMessage([
-        'chat_id' => $chatId,
-        'text' => "Rasm yuboring"
-    ]);
-}
-
-function handleWaitPhoto($pdo, $telegram, $chatId, $photo, $user)
-{
-    if (!$photo) return;
-
-    $temp = json_decode($user['temp_data'], true);
+    if ($animalText === '') {
+        $telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Iltimos, hayvon nomi yoki turini yozing."
+        ]);
+        return;
+    }
 
     insertByAvailableColumns($pdo, 'posts', [
         'user_id' => $user['id'],
-        'title' => 'Srochno sotiladi',
-        'breed' => $temp['animal_type']
+        'title' => $animalText,
+        'breed' => $animalText,
     ]);
 
-    updateUser($pdo, $chatId, ['step' => 'main', 'temp_data' => '{}']);
+    updateStep($pdo, $chatId, 'main');
 
     $telegram->sendMessage([
         'chat_id' => $chatId,
